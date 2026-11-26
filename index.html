@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Loan tracker</title>
+<style>
+:root{--bg:#f7f7f5;--card:#fff;--tx:#1d1d1b;--mu:#6b6b66;--bd:#e0e0da;--ac:#2f6fed;--hi:#e8f0ff;--ok:#e6f5ea;--neg:#c0392b;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#171716;--card:#222220;--tx:#eeeeea;--mu:#9a9a94;--bd:#38382f;--ac:#6b9bff;--hi:#1f2c47;--ok:#1d3324;--neg:#ff7b6b;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#171716;--card:#222220;--tx:#eeeeea;--mu:#9a9a94;--bd:#38382f;--ac:#6b9bff;--hi:#1f2c47;--ok:#1d3324;--neg:#ff7b6b;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif;padding:12px}
+h1{font-size:20px;margin:4px 0 12px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:12px;margin-bottom:12px}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+@media(min-width:700px){.grid{grid-template-columns:repeat(3,1fr)}}
+label{display:block;font-size:12px;color:var(--mu)}
+input{width:100%;box-sizing:border-box;font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:6px 8px}
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.stat{background:var(--bg);border-radius:8px;padding:8px}.stat b{display:block;font-size:17px}
+.wrap{overflow-x:auto;border:1px solid var(--bd);border-radius:12px;background:var(--card)}
+table{border-collapse:collapse;width:100%;min-width:960px;font-size:13px}
+th,td{padding:5px 6px;text-align:right;border-bottom:1px solid var(--bd);white-space:nowrap}
+th{position:sticky;top:0;background:var(--card);color:var(--mu);font-weight:600}
+td:first-child,th:first-child,td:nth-child(2),th:nth-child(2){text-align:left}
+td input{width:84px;text-align:right;padding:3px 5px}td input.r{width:60px}
+tr.chg td{background:var(--hi)}tr.can td{background:var(--ok)}
+.neg{color:var(--neg)}.mu{color:var(--mu);font-size:12px}.tag{font-size:11px;color:var(--ac)}
+summary{cursor:pointer}tr.info td{text-align:left;white-space:normal;background:var(--hi)}tr.cover td{box-shadow:inset 0 2px 0 #d4a017,inset 0 -2px 0 #d4a017}textarea{width:100%;box-sizing:border-box;font:12px monospace;color:var(--tx);background:var(--bg);border:1px solid var(--bd);border-radius:8px;margin:6px 0}
+.bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}button{font:inherit;color:var(--tx);background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:6px 10px}
+#top{position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px));width:42px;height:42px;border-radius:50%;background:var(--ac);color:#fff;border:0;font-size:20px;opacity:.9;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+tr.paidrow td{opacity:.55}tr.now td{outline:2px solid var(--ac);outline-offset:-2px}.cmp{width:100%;min-width:0;margin-top:6px}.cmp td,.cmp th{text-align:right;padding:3px 4px}.cmp td:first-child,.cmp th:first-child{text-align:left}
+</style></head><body>
+<h1>Loan tracker</h1>
+<details class="card" id="setup"><summary><b>Setup &amp; savings target</b></summary><div class="grid" style="margin-top:10px">
+<div><label>Amount owed</label><input id="P" type="number" step="any"></div>
+<div><label>Annual interest rate (%)</label><input id="rate" type="number" step="any"></div>
+<div><label>Terms (months)</label><input id="n" type="number"></div>
+<div><label>First instalment date</label><input id="date" type="date"></div>
+<div><label>Min. instalments to keep in savings</label><input id="minTerms" type="number"></div>
+<div><label>Min. prepayment amount</label><input id="minPre" type="number" step="any"></div>
+</div>
+<p class="mu">Edit the rate in any row to change it from that month onward; earlier months stay untouched. Changing the savings target recalculates the table.</p></details>
+<div class="bar"><button onclick="jump()">Jump to current month</button><button onclick="box(1)">Export</button><button onclick="box(0)">Import</button></div>
+<div class="card" id="io" style="display:none"><label id="iol"></label><input type="file" id="fi" accept=".json,application/json" style="display:none"><textarea id="ta" rows="5"></textarea><div class="bar"><button id="iob"></button><button onclick="document.getElementById('io').style.display='none'">Close</button></div></div>
+<div class="card"><div class="stats" id="stats"></div></div>
+<div class="wrap"><table><thead><tr><th>#</th><th>Date</th><th>Paid</th><th>Rate %</th><th>Payment</th><th>Principal</th><th>Interest</th><th>Paid in</th><th>Prepaid</th><th>Balance</th><th>Savings</th></tr></thead><tbody id="body"></tbody></table></div>
+<p class="mu">Green rows: savings allow a prepayment (savings minus the reserve of the minimum instalments reach the minimum prepayment). Paid in defaults to the payment; any difference moves to or from savings. Tick Paid to flag a month as done.</p>
+<button id="top" onclick="window.scrollTo({top:0,behavior:'smooth'})" aria-label="Back to top">↑</button>
+<script>
+var K="loan-tracker-v1",S={P:100000,rate:5,n:120,date:new Date().toISOString().slice(0,10),minTerms:24,minPre:5000,rows:{},rates:{}};
+try{var s=localStorage.getItem(K);if(s)S=Object.assign(S,JSON.parse(s))}catch(e){}
+function save(){try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}}
+function f(x){return(x<0?"\u2212":"")+Math.abs(x).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}
+function pmt(r,m,b){return r==0?b/m:b*r/(1-Math.pow(1+r,-m))}
+function pv(r,m,p){return r==0?p*m:p*(1-Math.pow(1+r,-m))/r}
+function nper(r,p,b){return r==0?b/p:-Math.log(1-b*r/p)/Math.log(1+r)}
+function addM(d,i){var t=new Date(d+"T00:00:00");if(isNaN(t))return"";var day=t.getDate();t.setDate(1);t.setMonth(t.getMonth()+i);var l=new Date(t.getFullYear(),t.getMonth()+1,0).getDate();t.setDate(Math.min(day,l));return t.toLocaleDateString(undefined,{year:"numeric",month:"short",day:"numeric"})}
+function sim(b,r,p){var k=0,t=0;while(b>0.005&&k<600){var it=b*r;k++;t+=it;if(b+it<=p)break;b=b+it-p}return{k:k,t:t}}
+function calc(){
+ var bal=+S.P,rem=+S.n,rate=+S.rate,pay=0,sav=0,out=[],ti=0,lastUser=0,r;
+ for(var i=1;bal>0.005&&i<=600;i++){
+  var ch=S.rates[i]!=null&&S.rates[i]!=="";if(ch)rate=+S.rates[i];
+  r=rate/1200;if(i==1||ch)pay=pmt(r,Math.max(rem,1),bal);
+  var it=bal*r,due=Math.min(pay,bal+it),pr=due-it;bal-=pr;ti+=it;
+  var u=S.rows[i]||{},paid=u.paid!=null?u.paid:due,pre=Math.min(u.pre||0,bal);
+  if(u.paid!=null||u.pre||u.flag)lastUser=i;
+  var maxPre=0,rr=rem-1,balB=bal;
+  var resv=+S.minTerms*pay;
+  sav+=paid-due-pre;bal-=pre;
+  if(pre>0&&bal>0.005&&u.mode!=="B")rem=Math.ceil(nper(r,pay,bal)-1e-9);else{rem--;if(pre>0&&bal>0.005)pay=pmt(r,Math.max(rem,1),bal)}
+  maxPre=Math.max(Math.min(sav-resv,balB),0);var sug=maxPre;
+  out.push({i:i,rate:rate,ch:ch||i==1,due:due,pr:pr,it:it,paid:paid,pre:pre,bal:Math.max(bal,0),sav:sav,flag:!!u.flag,can:sug>=+S.minPre&&sug>0,sug:sug,maxPre:Math.max(maxPre,0),balB:balB,remB:rr,r:r,pay:pay,mode:u.mode||"A",remA:rem,resv:resv});
+ }
+ return{out:out,ti:ti,lastUser:lastUser};
+}
+var cmpOpen=false;
+function cmpHtml(x){
+ var a=x.sug,b2=x.balB-a,base=sim(x.balB,x.r,x.pay),A=sim(b2,x.r,x.pay),np=pmt(x.r,Math.max(x.remB,1),b2),B=sim(b2,x.r,np);
+ function e(k){return addM(S.date,x.i-1+k)}
+ return '<table class="cmp"><tr><th>After prepaying '+f(a)+'</th><th>A: same payment</th><th>B: same period</th></tr>'+
+ '<tr><td>Monthly payment</td><td>'+f(x.pay)+'</td><td>'+f(np)+'</td></tr>'+
+ '<tr><td>Instalments left</td><td>'+A.k+'</td><td>'+B.k+'</td></tr>'+
+ '<tr><td>Ends</td><td>'+e(A.k)+'</td><td>'+e(B.k)+'</td></tr>'+
+ '<tr><td>Interest still to pay</td><td>'+f(A.t)+'</td><td>'+f(B.t)+'</td></tr>'+
+ '<tr><td>Interest saved</td><td>'+f(base.t-A.t)+'</td><td>'+f(base.t-B.t)+'</td></tr></table><span class="mu">Assumes the current rate stays unchanged.</span>';
+}
+function render(){
+ var c=calc(),o=c.out,cur=o[c.lastUser-1]||null,nxt=o[c.lastUser]||o[0];
+ var sav=cur?cur.sav:0,bal=cur?cur.bal:+S.P;
+ var can=o.find(function(x){return x.i>c.lastUser&&x.can});
+ var cov=nxt&&nxt.due>0?(sav/nxt.due):0;var cover=o.find(function(x){return x.bal>0.005&&x.sav>=x.bal}),cvr='<div class="stat" style="grid-column:1/-1">Savings reach the outstanding balance<b>'+(cover?('#'+cover.i+' ('+addM(S.date,cover.i-1)+')'):'not within the schedule')+'</b><span class="mu">'+(cover?(cover.i<=c.lastUser?'already reached':'in '+(cover.i-c.lastUser)+' instalments')+'; savings '+f(cover.sav)+' vs balance '+f(cover.bal)+'. ':'')+'Future months are assumed paid at the instalment unless you enter a different Paid in.</span></div>';var pp=o.filter(function(x){return x.pre>0}).pop();var up=pp?'<div class="stat" style="grid-column:1/-1">Prepayment applied<b>'+f(pp.pre)+'</b><span class="mu">#'+pp.i+', '+(pp.mode==="B"?"lower payment, same period":"same payment, shorter period")+'</span><div class="bar" style="margin:8px 0 0"><button onclick="undoPre('+pp.i+')">Undo</button></div></div>':'';
+ var np=can?('<b>'+f(can.sug)+'</b><span class="mu">#'+can.i+' ('+addM(S.date,can.i-1)+'). Savings then '+f(can.sav)+' minus the reserve of '+S.minTerms+' instalments ('+f(can.resv)+') = '+f(can.maxPre)+'.</span><div class="bar" style="margin:8px 0 0"><button onclick="applyPre('+can.i+',\'A\')">Prepay: shorter period</button><button onclick="applyPre('+can.i+',\'B\')">Prepay: lower payment</button></div><details'+(cmpOpen?' open':'')+' ontoggle="cmpOpen=this.open"><summary>Compare: shorter period vs lower payment</summary>'+cmpHtml(can)+'</details>'):
+  ('<b>not reached yet</b><span class="mu">Savings now '+f(sav)+'; needed: reserve '+(nxt?f(nxt.resv):'-')+' ('+S.minTerms+' instalments) plus minimum prepayment '+f(+S.minPre)+'.</span>');
+ document.getElementById("stats").innerHTML=
+ '<div class="stat">Savings now<b class="'+(sav<0?"neg":"")+'">'+f(sav)+'</b><span class="mu">covers about '+cov.toFixed(1)+' instalments</span></div>'+
+ '<div class="stat">Balance now<b>'+f(bal)+'</b></div>'+
+ '<div class="stat">Current rate<b>'+(nxt?nxt.rate:S.rate)+' %</b></div>'+
+ '<div class="stat">Projected end<b>'+(o.length?addM(S.date,o.length-1):"-")+'</b><span class="mu">'+o.length+' instalments, interest '+f(c.ti)+'</span></div>'+
+ '<div class="stat" style="grid-column:1/-1">Next possible prepayment'+np+'</div>'+cvr;
+ document.getElementById("body").innerHTML=o.map(function(x){
+  return '<tr id="r'+x.i+'" class="'+(x.flag?"paidrow ":"")+(can&&x.i===can.i?"can":x.ch?"chg":"")+(cover&&x.i===cover.i?" cover":"")+'"><td>'+x.i+'</td><td>'+addM(S.date,x.i-1)+'</td>'+
+  '<td style="text-align:center"><input type="checkbox" style="width:auto"'+(x.flag?' checked':'')+' onchange="setRow('+x.i+',\'flag\',this.checked?1:\'\')"></td>'+
+  '<td><input class="r" type="number" step="any" value="'+x.rate+'" onchange="setRate('+x.i+',this.value)"></td>'+
+  '<td>'+f(x.due)+'</td><td>'+f(x.pr)+'</td><td>'+f(x.it)+'</td>'+
+  '<td><input type="number" step="any" value="'+x.paid.toFixed(2)+'" onchange="setRow('+x.i+',\'paid\',this.value)"></td>'+
+  '<td><input type="number" step="any" value="'+(x.pre||"")+'" placeholder="0" onchange="setRow('+x.i+',\'pre\',this.value)"></td>'+
+  '<td>'+f(x.bal)+'</td><td class="'+(x.sav<0?"neg":"")+'">'+f(x.sav)+(can&&x.i===can.i?' <span class="tag">prepay \u2264 '+f(x.sug)+'</span>':'')+(cover&&x.i===cover.i?' <span class="tag">★ savings cover balance</span>':'')+'</td></tr>'+(x.pre>0?infoRow(x):'');
+ }).join("");
+}
+function setRow(i,k,v){var r=S.rows[i]||(S.rows[i]={});if(v===""){delete r[k];if(k=="pre")delete r.mode}else r[k]=+v;if(k=="paid"&&r.paid!=null){var c=calc().out[i-1];if(c&&Math.abs(r.paid-c.due)<0.005)delete r.paid}save();render()}
+function setRate(i,v){if(i==1){S.rate=+v;document.getElementById("rate").value=v}else{var prev=calc().out[i-2];if(v===""||(prev&&+v==prev.rate))delete S.rates[i];else S.rates[i]=+v}save();render()}
+function infoRow(x){var m=Math.max(x.remA,0);return '<tr class="info"><td colspan="11">Prepayment of <b>'+f(x.pre)+'</b> in #'+x.i+' ('+(x.mode==="B"?"lower payment, same period":"same payment, shorter period")+'). Payment now '+f(x.pay)+', '+m+' instalments left, ends '+addM(S.date,x.i+m-1)+'. <button onclick="undoPre('+x.i+')">Undo</button></td></tr>'}
+function applyPre(i,m){var c=calc().out[i-1];if(!c)return;var r=S.rows[i]||(S.rows[i]={});r.pre=Math.floor(c.sug*100)/100;r.mode=m;save();render()}
+function undoPre(i){var r=S.rows[i];if(r){delete r.pre;delete r.mode;if(r.paid==null&&!r.flag)delete S.rows[i]}save();render()}
+function jump(){var d=new Date(S.date+"T00:00:00"),t=new Date(),i=(t.getFullYear()-d.getFullYear())*12+t.getMonth()-d.getMonth()+1,n=calc().out.length;i=Math.max(1,Math.min(i,n));var el=document.getElementById("r"+i);if(el){el.scrollIntoView({behavior:"smooth",block:"center"});el.classList.add("now");setTimeout(function(){el.classList.remove("now")},2500)}}
+function box(ex){var io=document.getElementById("io"),ta=document.getElementById("ta"),b=document.getElementById("iob");io.style.display="block";document.getElementById("fi").style.display=ex?"none":"block";
+ document.getElementById("iol").textContent=ex?"Copy this text and keep it, or paste it into the app on another device.":"Paste exported text here, then load it (replaces current data).";
+ if(ex){ta.value=JSON.stringify(S,null,2);b.textContent="Copy";b.onclick=function(){ta.select();try{navigator.clipboard.writeText(ta.value)}catch(e){try{document.execCommand("copy")}catch(e2){}}b.textContent="Copied"}}
+ else{ta.value="";b.textContent="Load";b.onclick=function(){try{var d=JSON.parse(ta.value);if(!d||d.P==null||!d.rows)throw 0;S=Object.assign({rates:{}},d);save();fill();render();io.style.display="none"}catch(e){alert("That does not look like valid exported data.")}}}}
+document.getElementById("fi").onchange=function(){var fl=this.files[0];if(!fl)return;var rd=new FileReader();rd.onload=function(){document.getElementById("ta").value=rd.result};rd.readAsText(fl)};
+function fill(){["P","rate","n","date","minTerms","minPre"].forEach(function(k){document.getElementById(k).value=S[k]})}
+["P","rate","n","date","minTerms","minPre"].forEach(function(k){var e=document.getElementById(k);e.onchange=function(){S[k]=k=="date"?e.value:+e.value;save();render()}});
+var tb=document.getElementById("top");function sc(){tb.style.display=window.scrollY>300?"block":"none"}window.addEventListener("scroll",sc);sc();
+fill();render();
+</script></body></html>
