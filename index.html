@@ -17,14 +17,14 @@ input{width:100%;box-sizing:border-box;font:inherit;color:var(--tx);background:v
 .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
 .stat{background:var(--bg);border-radius:8px;padding:8px}.stat b{display:block;font-size:17px}
 .wrap{overflow-x:auto;border:1px solid var(--bd);border-radius:12px;background:var(--card)}
-table{border-collapse:collapse;width:100%;min-width:960px;font-size:13px}
+table{border-collapse:collapse;width:100%;min-width:972px;table-layout:fixed;font-size:13px}
 th,td{padding:5px 6px;text-align:right;border-bottom:1px solid var(--bd);white-space:nowrap}
 th{position:sticky;top:0;background:var(--card);color:var(--mu);font-weight:600}
 td:first-child,th:first-child,td:nth-child(2),th:nth-child(2){text-align:left}
 td input{width:84px;text-align:right;padding:3px 5px}td input.r{width:60px}
 tr.chg td{background:var(--hi)}tr.can td{background:var(--ok)}
 .neg{color:var(--neg)}.mu{color:var(--mu);font-size:12px}.tag{font-size:11px;color:var(--ac)}
-summary{cursor:pointer}tr.info td{text-align:left;white-space:normal;background:var(--hi)}tr.cover td{box-shadow:inset 0 2px 0 #d4a017,inset 0 -2px 0 #d4a017}textarea{width:100%;box-sizing:border-box;font:12px monospace;color:var(--tx);background:var(--bg);border:1px solid var(--bd);border-radius:8px;margin:6px 0}
+summary{cursor:pointer}.cmp{table-layout:auto}.wrap th:nth-child(1){width:38px}.wrap th:nth-child(2){width:104px}.wrap th:nth-child(3){width:50px}.wrap th:nth-child(4){width:74px}.wrap th:nth-child(5),.wrap th:nth-child(6),.wrap th:nth-child(7){width:88px}.wrap th:nth-child(8),.wrap th:nth-child(9){width:100px}.wrap th:nth-child(10){width:92px}.wrap th:nth-child(11){width:150px}.wrap td:nth-child(11){white-space:normal}.ib{position:sticky;left:6px;width:min(calc(100vw - 50px),640px)}tr.info td{text-align:left;white-space:normal;background:var(--hi)}tr.cover td{box-shadow:inset 0 2px 0 #d4a017,inset 0 -2px 0 #d4a017}textarea{width:100%;box-sizing:border-box;font:12px monospace;color:var(--tx);background:var(--bg);border:1px solid var(--bd);border-radius:8px;margin:6px 0}
 .bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}button{font:inherit;color:var(--tx);background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:6px 10px}
 #top{position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px));width:42px;height:42px;border-radius:50%;background:var(--ac);color:#fff;border:0;font-size:20px;opacity:.9;box-shadow:0 2px 8px rgba(0,0,0,.3)}
 tr.paidrow td{opacity:.55}tr.now td{outline:2px solid var(--ac);outline-offset:-2px}.cmp{width:100%;min-width:0;margin-top:6px}.cmp td,.cmp th{text-align:right;padding:3px 4px}.cmp td:first-child,.cmp th:first-child{text-align:left}
@@ -39,8 +39,8 @@ tr.paidrow td{opacity:.55}tr.now td{outline:2px solid var(--ac);outline-offset:-
 <div><label>Min. prepayment amount</label><input id="minPre" type="number" step="any"></div>
 </div>
 <p class="mu">Edit the rate in any row to change it from that month onward; earlier months stay untouched. Changing the savings target recalculates the table.</p></details>
-<div class="bar"><button onclick="jump()">Jump to current month</button><button onclick="box(1)">Export</button><button onclick="box(0)">Import</button></div>
-<div class="card" id="io" style="display:none"><label id="iol"></label><input type="file" id="fi" accept=".json,application/json" style="display:none"><textarea id="ta" rows="5"></textarea><div class="bar"><button id="iob"></button><button onclick="document.getElementById('io').style.display='none'">Close</button></div></div>
+<div class="bar"><button onclick="jump()">Jump to current month</button><button onclick="expo()">Export</button><button onclick="impo()">Import</button><input type="file" id="fi" accept=".json,application/json" style="position:absolute;left:-9999px;opacity:0"></div>
+<div class="card" id="io" style="display:none"><label id="iol"></label><textarea id="ta" rows="5"></textarea><div class="bar"><button id="iob"></button><button onclick="document.getElementById('io').style.display='none'">Close</button></div></div>
 <div class="card"><div class="stats" id="stats"></div></div>
 <div class="wrap"><table><thead><tr><th>#</th><th>Date</th><th>Paid</th><th>Rate %</th><th>Payment</th><th>Principal</th><th>Interest</th><th>Paid in</th><th>Prepaid</th><th>Balance</th><th>Savings</th></tr></thead><tbody id="body"></tbody></table></div>
 <p class="mu">Green rows: savings allow a prepayment (savings minus the reserve of the minimum instalments reach the minimum prepayment). Paid in defaults to the payment; any difference moves to or from savings. Tick Paid to flag a month as done.</p>
@@ -49,7 +49,7 @@ tr.paidrow td{opacity:.55}tr.now td{outline:2px solid var(--ac);outline-offset:-
 var K="loan-tracker-v1",S={P:100000,rate:5,n:120,date:new Date().toISOString().slice(0,10),minTerms:24,minPre:5000,rows:{},rates:{}};
 try{var s=localStorage.getItem(K);if(s)S=Object.assign(S,JSON.parse(s))}catch(e){}
 function save(){try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}}
-function f(x){return(x<0?"\u2212":"")+Math.abs(x).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}
+function f(x){return(x<0?"\u2212":"")+Math.abs(x).toLocaleString(undefined,{maximumFractionDigits:0})}
 function pmt(r,m,b){return r==0?b/m:b*r/(1-Math.pow(1+r,-m))}
 function pv(r,m,p){return r==0?p*m:p*(1-Math.pow(1+r,-m))/r}
 function nper(r,p,b){return r==0?b/p:-Math.log(1-b*r/p)/Math.log(1+r)}
@@ -64,11 +64,11 @@ function calc(){
   var u=S.rows[i]||{},paid=u.paid!=null?u.paid:due,pre=Math.min(u.pre||0,bal);
   if(u.paid!=null||u.pre||u.flag)lastUser=i;
   var maxPre=0,rr=rem-1,balB=bal;
-  var resv=+S.minTerms*pay;
+  var resv=+S.minTerms*pay,payB=pay;
   sav+=paid-due-pre;bal-=pre;
   if(pre>0&&bal>0.005&&u.mode!=="B")rem=Math.ceil(nper(r,pay,bal)-1e-9);else{rem--;if(pre>0&&bal>0.005)pay=pmt(r,Math.max(rem,1),bal)}
   maxPre=Math.max(Math.min(sav-resv,balB),0);var sug=maxPre;
-  out.push({i:i,rate:rate,ch:ch||i==1,due:due,pr:pr,it:it,paid:paid,pre:pre,bal:Math.max(bal,0),sav:sav,flag:!!u.flag,can:sug>=+S.minPre&&sug>0,sug:sug,maxPre:Math.max(maxPre,0),balB:balB,remB:rr,r:r,pay:pay,mode:u.mode||"A",remA:rem,resv:resv});
+  out.push({i:i,rate:rate,ch:ch||i==1,due:due,pr:pr,it:it,paid:paid,pre:pre,bal:Math.max(bal,0),sav:sav,flag:!!u.flag,can:sug>=+S.minPre&&sug>0,sug:sug,maxPre:Math.max(maxPre,0),balB:balB,remB:rr,r:r,pay:pay,mode:u.mode||"A",remA:rem,resv:resv,payB:payB});
  }
  return{out:out,ti:ti,lastUser:lastUser};
 }
@@ -101,22 +101,25 @@ function render(){
   '<td style="text-align:center"><input type="checkbox" style="width:auto"'+(x.flag?' checked':'')+' onchange="setRow('+x.i+',\'flag\',this.checked?1:\'\')"></td>'+
   '<td><input class="r" type="number" step="any" value="'+x.rate+'" onchange="setRate('+x.i+',this.value)"></td>'+
   '<td>'+f(x.due)+'</td><td>'+f(x.pr)+'</td><td>'+f(x.it)+'</td>'+
-  '<td><input type="number" step="any" value="'+x.paid.toFixed(2)+'" onchange="setRow('+x.i+',\'paid\',this.value)"></td>'+
+  '<td><input type="number" step="any" value="'+(S.rows[x.i]&&S.rows[x.i].paid!=null?Math.round(x.paid):"")+'" placeholder="'+Math.round(x.due)+'" onchange="setRow('+x.i+',\'paid\',this.value)"></td>'+
   '<td><input type="number" step="any" value="'+(x.pre||"")+'" placeholder="0" onchange="setRow('+x.i+',\'pre\',this.value)"></td>'+
   '<td>'+f(x.bal)+'</td><td class="'+(x.sav<0?"neg":"")+'">'+f(x.sav)+(can&&x.i===can.i?' <span class="tag">prepay \u2264 '+f(x.sug)+'</span>':'')+(cover&&x.i===cover.i?' <span class="tag">★ savings cover balance</span>':'')+'</td></tr>'+(x.pre>0?infoRow(x):'');
  }).join("");
 }
-function setRow(i,k,v){var r=S.rows[i]||(S.rows[i]={});if(v===""){delete r[k];if(k=="pre")delete r.mode}else r[k]=+v;if(k=="paid"&&r.paid!=null){var c=calc().out[i-1];if(c&&Math.abs(r.paid-c.due)<0.005)delete r.paid}save();render()}
+function setRow(i,k,v){var r=S.rows[i]||(S.rows[i]={});if(v===""){delete r[k];if(k=="pre")delete r.mode}else r[k]=+v;if(k=="paid"&&r.paid!=null){var c=calc().out[i-1];if(c&&Math.abs(r.paid-c.due)<0.5)delete r.paid}save();render()}
 function setRate(i,v){if(i==1){S.rate=+v;document.getElementById("rate").value=v}else{var prev=calc().out[i-2];if(v===""||(prev&&+v==prev.rate))delete S.rates[i];else S.rates[i]=+v}save();render()}
-function infoRow(x){var m=Math.max(x.remA,0);return '<tr class="info"><td colspan="11">Prepayment of <b>'+f(x.pre)+'</b> in #'+x.i+' ('+(x.mode==="B"?"lower payment, same period":"same payment, shorter period")+'). Payment now '+f(x.pay)+', '+m+' instalments left, ends '+addM(S.date,x.i+m-1)+'. <button onclick="undoPre('+x.i+')">Undo</button></td></tr>'}
-function applyPre(i,m){var c=calc().out[i-1];if(!c)return;var r=S.rows[i]||(S.rows[i]={});r.pre=Math.floor(c.sug*100)/100;r.mode=m;save();render()}
+function infoRow(x){var m=Math.max(x.remA,0),b=x.mode==="B",d=addM(S.date,x.i+m-1);return '<tr class="info"><td colspan="11"><div class="ib">Prepayment of <b>'+f(x.pre)+'</b> in #'+x.i+' ('+(b?'lower payment, same period':'same payment, shorter period')+'). '+(b?'Payment '+f(x.payB)+' → '+f(x.pay)+', installments left stay '+m:'Payment stays '+f(x.pay)+', installments left '+x.remB+' → '+m)+', ends '+d+'. <button onclick="undoPre('+x.i+')">Undo</button></div></td></tr>'}
+function infoRowOld(x){var m=Math.max(x.remA,0);return '<tr class="info"><td colspan="11">Prepayment of <b>'+f(x.pre)+'</b> in #'+x.i+' ('+(x.mode==="B"?"lower payment, same period":"same payment, shorter period")+'). Payment now '+f(x.pay)+', '+m+' instalments left, ends '+addM(S.date,x.i+m-1)+'. <button onclick="undoPre('+x.i+')">Undo</button></td></tr>'}
+function applyPre(i,m){var c=calc().out[i-1];if(!c)return;var r=S.rows[i]||(S.rows[i]={});r.pre=Math.floor(c.sug);r.mode=m;save();render()}
 function undoPre(i){var r=S.rows[i];if(r){delete r.pre;delete r.mode;if(r.paid==null&&!r.flag)delete S.rows[i]}save();render()}
 function jump(){var d=new Date(S.date+"T00:00:00"),t=new Date(),i=(t.getFullYear()-d.getFullYear())*12+t.getMonth()-d.getMonth()+1,n=calc().out.length;i=Math.max(1,Math.min(i,n));var el=document.getElementById("r"+i);if(el){el.scrollIntoView({behavior:"smooth",block:"center"});el.classList.add("now");setTimeout(function(){el.classList.remove("now")},2500)}}
-function box(ex){var io=document.getElementById("io"),ta=document.getElementById("ta"),b=document.getElementById("iob");io.style.display="block";document.getElementById("fi").style.display=ex?"none":"block";
+function box(ex){var io=document.getElementById("io"),ta=document.getElementById("ta"),b=document.getElementById("iob");io.style.display="block";
  document.getElementById("iol").textContent=ex?"Copy this text and keep it, or paste it into the app on another device.":"Paste exported text here, then load it (replaces current data).";
  if(ex){ta.value=JSON.stringify(S,null,2);b.textContent="Copy";b.onclick=function(){ta.select();try{navigator.clipboard.writeText(ta.value)}catch(e){try{document.execCommand("copy")}catch(e2){}}b.textContent="Copied"}}
  else{ta.value="";b.textContent="Load";b.onclick=function(){try{var d=JSON.parse(ta.value);if(!d||d.P==null||!d.rows)throw 0;S=Object.assign({rates:{}},d);save();fill();render();io.style.display="none"}catch(e){alert("That does not look like valid exported data.")}}}}
-document.getElementById("fi").onchange=function(){var fl=this.files[0];if(!fl)return;var rd=new FileReader();rd.onload=function(){document.getElementById("ta").value=rd.result};rd.readAsText(fl)};
+document.getElementById("fi").onchange=function(){var fl=this.files[0];if(!fl)return;var rd=new FileReader();rd.onload=function(){try{var d=JSON.parse(rd.result);if(!d||d.P==null||!d.rows)throw 0;S=Object.assign({rates:{}},d);save();fill();render()}catch(e){alert("That does not look like a valid backup file.")}};rd.readAsText(fl);this.value=""};
+function impo(){document.getElementById("fi").click()}
+async function expo(){try{var d=window.claude&&await claude.use("downloads");if(!d)throw 0;await d.save({filename:"loan-tracker-backup-"+new Date().toISOString().slice(0,10)+".json",data:JSON.stringify(S,null,2)})}catch(e){if(e&&e.code==="declined")return;box(1)}}
 function fill(){["P","rate","n","date","minTerms","minPre"].forEach(function(k){document.getElementById(k).value=S[k]})}
 ["P","rate","n","date","minTerms","minPre"].forEach(function(k){var e=document.getElementById(k);e.onchange=function(){S[k]=k=="date"?e.value:+e.value;save();render()}});
 var tb=document.getElementById("top");function sc(){tb.style.display=window.scrollY>300?"block":"none"}window.addEventListener("scroll",sc);sc();
