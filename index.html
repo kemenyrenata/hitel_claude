@@ -119,7 +119,20 @@ function box(ex){var io=document.getElementById("io"),ta=document.getElementById
  else{ta.value="";b.textContent="Load";b.onclick=function(){try{var d=JSON.parse(ta.value);if(!d||d.P==null||!d.rows)throw 0;S=Object.assign({rates:{}},d);save();fill();render();io.style.display="none"}catch(e){alert("That does not look like valid exported data.")}}}}
 document.getElementById("fi").onchange=function(){var fl=this.files[0];if(!fl)return;var rd=new FileReader();rd.onload=function(){try{var d=JSON.parse(rd.result);if(!d||d.P==null||!d.rows)throw 0;S=Object.assign({rates:{}},d);save();fill();render()}catch(e){alert("That does not look like a valid backup file.")}};rd.readAsText(fl);this.value=""};
 function impo(){document.getElementById("fi").click()}
-async function expo(){try{var d=window.claude&&await claude.use("downloads");if(!d)throw 0;await d.save({filename:"loan-tracker-backup-"+new Date().toISOString().slice(0,10)+".json",data:JSON.stringify(S,null,2)})}catch(e){if(e&&e.code==="declined")return;box(1)}}
+function backupName(){return"loan-tracker-backup-"+new Date().toISOString().slice(0,10)+".json"}
+async function expo(){
+ var data=JSON.stringify(S,null,2),name=backupName();
+ if(typeof showSaveFilePicker==="function"){
+  try{
+   var h=await showSaveFilePicker({suggestedName:name,types:[{description:"JSON backup",accept:{"application/json":[".json"]}}]});
+   var w=await h.createWritable();await w.write(data);await w.close();
+   return;
+  }catch(e){if(e&&e.name==="AbortError")return}
+ }
+ var blob=new Blob([data],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");
+ a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();
+ setTimeout(function(){URL.revokeObjectURL(url)},1000);
+}
 function fill(){["P","rate","n","date","minTerms","minPre"].forEach(function(k){document.getElementById(k).value=S[k]})}
 ["P","rate","n","date","minTerms","minPre"].forEach(function(k){var e=document.getElementById(k);e.onchange=function(){S[k]=k=="date"?e.value:+e.value;save();render()}});
 var tb=document.getElementById("top");function sc(){tb.style.display=window.scrollY>300?"block":"none"}window.addEventListener("scroll",sc);sc();
